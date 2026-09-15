@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The C4 CO₂ pump — a short guide — BS3018</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f4efe2;--plate:#fbf8ef;--ink:#26241e;--soft:#6b6455;--rule:#cfc5ad;
+  --co2:#38657d;--acid:#b3781f;--bs:#2f5d3f}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:Spectral,Georgia,serif;font-size:17px;line-height:1.65}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px) 80px}
+h1{font-size:clamp(27px,4.2vw,39px);font-weight:600;line-height:1.14;margin:0 0 10px;letter-spacing:-.012em}
+h2{font-size:1.22rem;font-weight:600;margin:38px 0 10px;letter-spacing:-.005em}
+h3{font-size:.95rem;font-weight:600;margin:22px 0 6px;color:var(--soft)}
+p{margin:0 0 13px;max-width:70ch}
+.stand{color:var(--soft);font-size:1.03rem}
+.course{font-size:.82rem;color:var(--soft);font-style:italic;margin:0 0 6px}
+a{color:var(--co2)}
+.tools{background:var(--plate);border:1px solid var(--rule);padding:14px 18px;margin:24px 0 8px}
+.tools p{margin:0 0 8px;font-size:.93rem}
+.tools p:last-child{margin-bottom:0}
+.tools b{font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin:14px 0 8px;table-layout:fixed}
+th,td{text-align:left;padding:7px 10px 7px 0;border-bottom:1px solid #e6dec9;vertical-align:baseline}
+th{font-weight:400;color:var(--soft);font-size:.85rem}
+td.n{font-family:"IBM Plex Mono",monospace;font-size:.92em}
+.caption{font-size:.82rem;color:var(--soft);font-style:italic;max-width:70ch}
+ul{padding-left:20px;margin:6px 0 14px;max-width:70ch}
+li{margin-bottom:8px}
+.refs{font-size:.9rem;line-height:1.55}
+.refs li{margin-bottom:11px}
+.refs .why{display:block;color:var(--soft);font-size:.86rem;font-style:italic;margin-top:2px}
+blockquote{margin:18px 0;padding:2px 0 2px 16px;border-left:3px solid var(--acid);
+  font-size:1.02rem;max-width:66ch}
+blockquote p:last-child{margin-bottom:0}
+hr{border:0;border-top:1px solid var(--rule);margin:38px 0 0}
+.mono{font-family:"IBM Plex Mono",monospace;font-size:.93em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="course">BS3018 — plant biology</p>
+<h1>The C4 CO₂ pump</h1>
+<p class="stand">A short guide to the two models, what they are meant to show you, and where to read further.</p>
+
+<div class="tools">
+<p><b>The pump and its leak</b> — a working C4 leaf with a dial for how tightly the bundle sheath is sealed. <a href="c4-pump-simulation.html">Open</a></p>
+<p><b>Build a Kranz leaf</b> — four enzymes and two cells, arranged however you like. <a href="kranz-anatomy-sandbox.html">Open</a></p>
+<p class="caption">Both run in a browser with nothing installed. Keep all three files in the same folder so the links work.</p>
+</div>
+
+<h2>The problem</h2>
+<p>Rubisco is not specific. It carboxylates RuBP with CO₂ and it oxygenates RuBP with O₂, and the two gases compete for the same active site. At 25 °C in today's air, a C3 leaf runs roughly one oxygenation for every three or four carboxylations. Recovering the 2-phosphoglycolate that oxygenation produces costs carbon, ATP and reducing power, and the ratio gets worse as temperature rises, because CO₂ becomes less soluble than O₂ and Rubisco's specificity falls at the same time.</p>
+<p>No plant has solved this by improving Rubisco. What C4 plants do instead is change the gas mixture the enzyme sees.</p>
+
+<h2>The solution</h2>
+<p>Hatch and Slack found in 1966 that in sugarcane the first stable product of fixation is not 3-phosphoglycerate but a four-carbon acid, labelled in C-4. The pathway that explains this is a two-cell pump:</p>
+<ul>
+<li>In the <b>mesophyll</b>, carbonic anhydrase converts CO₂ to bicarbonate, and PEP carboxylase fixes the bicarbonate onto phosphoenolpyruvate to give a four-carbon acid. PEP carboxylase has no oxygenase activity and no affinity problem at these concentrations.</li>
+<li>The acid diffuses through plasmodesmata into the <b>bundle sheath</b>, where a decarboxylase releases the CO₂ again.</li>
+<li>Rubisco sits only in the bundle sheath, and now works in a compartment holding far more CO₂ than the air outside.</li>
+<li>The three-carbon skeleton returns to the mesophyll and pyruvate,Pi dikinase regenerates PEP at a cost of two ATP.</li>
+</ul>
+<p>Those two ATP are the price. A C3 leaf spends three ATP per carboxylation; a C4 leaf spends five, and gets in return a Rubisco that has almost stopped oxygenating.</p>
+
+<h2>Why the leak is the whole story</h2>
+<p>The bundle sheath is not sealed. CO₂ concentrated inside it diffuses back out, and the fraction of PEP carboxylase flux that escapes this way — <span class="mono">φ = L/V<sub>p</sub></span>, leakiness — sits somewhere near a fifth in a healthy leaf. The pump therefore has to run faster than net assimilation, which is called overcycling, and every wasted turn still costs its two ATP.</p>
+<blockquote><p>This is the thing the first model is for. Open it, take the wall conductance from 5 to 20, and watch bundle sheath CO₂ collapse while the ATP bill climbs. The pathway's advantage is not the pump; it is the pump together with a barrier good enough to make the pumping worth paying for.</p></blockquote>
+<p>Jenkins, Furbank and Hatch built the model this simulation follows, and predicted around 13% leakage with the C4 cycle running some 15% faster than net photosynthesis. Hatch, Agostino and Jenkins later measured the leak directly, chasing a <sup>14</sup>CO₂ pulse with unlabelled CO₂ and watching label come back out of the leaf.</p>
+
+<h2>Why the anatomy has to be built the way it is</h2>
+<p>Kranz anatomy looks like a decorative detail in a textbook cross-section. It is not. The second model lets you rearrange it, and five separate requirements show up as five different ways of failing:</p>
+<ul>
+<li><b>Capture and release must be in different cells.</b> Put PEP carboxylase and the decarboxylase together and the cycle still turns — dozens of times a second — but transports nothing at all while spending the ATP anyway.</li>
+<li><b>Rubisco must be in the cell the pump fills.</b> Otherwise the bundle sheath is pressurised with CO₂ that nothing consumes, and all of it leaks back.</li>
+<li><b>Only the mesophyll touches the air.</b> Put everything in the bundle sheath and the leaf starves, because the barrier that holds CO₂ in also keeps it out.</li>
+<li><b>The wall needs a diffusion barrier.</b> In NADP-ME and PCK grasses this is a suberised lamella, perfectly correlated with photosynthetic type in the 42 grasses Hattersley and Browning surveyed.</li>
+<li><b>The cells need unusually many plasmodesmata.</b> The shuttle carries more flux than net photosynthesis, in both directions. C4 monocots have several times the plasmodesmatal density of their C3 relatives at this interface.</li>
+</ul>
+
+<h2>Numbers worth carrying</h2>
+<table>
+<thead><tr><th></th><th>C3 leaf</th><th>C4 leaf</th></tr></thead>
+<tbody>
+<tr><td>CO₂ at Rubisco, at 400 µbar in air</td><td class="n">250–300 µbar</td><td class="n">1000–2000 µbar</td></tr>
+<tr><td>Oxygenation per carboxylation, V<sub>o</sub>/V<sub>c</sub></td><td class="n">0.25–0.30</td><td class="n">under 0.10</td></tr>
+<tr><td>CO₂ compensation point</td><td class="n">40–60 µbar</td><td class="n">under 10 µbar</td></tr>
+<tr><td>ATP per net CO₂ fixed</td><td class="n">3, nearer 4–5 with photorespiration</td><td class="n">5, nearer 6 with the leak</td></tr>
+<tr><td>Leakiness, φ</td><td class="n">—</td><td class="n">0.15–0.25</td></tr>
+<tr><td>Bundle sheath conductance, g<sub>bs</sub></td><td class="n">—</td><td class="n">about 3 mmol m⁻² s⁻¹ bar⁻¹</td></tr>
+</tbody>
+</table>
+<p class="caption">Values at 25 °C. Both models are parameterised to land inside these ranges when built correctly, and the diagnostics panels will tell you when you have pushed them outside.</p>
+
+<h2>Where the models stop</h2>
+<p>Each tool lists its own simplifications, and those lists are worth reading as carefully as the results. Four are worth flagging here because they touch the conclusions you might otherwise draw:</p>
+<ul>
+<li><b>Temperature is fixed at 25 °C.</b> The C3/C4 crossover with temperature, which is most of the ecological story, is outside both models.</li>
+<li><b>One decarboxylation type only.</b> Real C4 plants come in NADP-ME, NAD-ME and PCK flavours that move reductant between the cells differently.</li>
+<li><b>The suberised lamella is not universal.</b> NAD-ME grasses do not have one, yet their leakiness is comparable — so a long symplastic path can apparently do the same job as a suberin barrier.</li>
+<li><b>Carbonic anhydrase is treated as all-or-nothing.</b> In the sandbox, moving it out of the mesophyll wrecks the leaf. In maize, a double mutant with under 3% of wild-type activity photosynthesises normally at today's CO₂ and only suffers below it. The sandbox exaggerates a real requirement; the reading below shows how much.</li>
+</ul>
+
+<h2>Reading</h2>
+
+<h3>Start here</h3>
+<ul class="refs">
+<li>von Caemmerer, S. &amp; Furbank, R. T. (2003) The C4 pathway: an efficient CO₂ pump. <i>Photosynthesis Research</i> <b>77</b>: 191–207.
+  <span class="why">The clearest short account of the pump as a pump. Read this first.</span></li>
+<li>Hatch, M. D. (1987) C4 photosynthesis: a unique blend of modified biochemistry, anatomy and ultrastructure. <i>Biochimica et Biophysica Acta</i> <b>895</b>: 81–106.
+  <span class="why">The synthesis by the person who found the pathway. Still the reference point.</span></li>
+<li>Kanai, R. &amp; Edwards, G. E. (1999) The biochemistry of C4 photosynthesis. In: Sage, R. F. &amp; Monson, R. K. (eds) <i>C4 Plant Biology</i>, Academic Press, pp. 49–87.
+  <span class="why">Where the three decarboxylation subtypes are laid out properly.</span></li>
+</ul>
+
+<h3>The original observation</h3>
+<ul class="refs">
+<li>Hatch, M. D. &amp; Slack, C. R. (1966) Photosynthesis by sugar-cane leaves. A new carboxylation reaction and the pathway of sugar formation. <i>Biochemical Journal</i> <b>101</b>: 103–111.
+  <span class="why">Four-second <sup>14</sup>CO₂ exposures, label in C-4 of malate and aspartate. Short, and worth reading in the original.</span></li>
+</ul>
+
+<h3>The pool and the leak</h3>
+<ul class="refs">
+<li>Furbank, R. T. &amp; Hatch, M. D. (1987) Mechanism of C4 photosynthesis: the size and composition of the inorganic carbon pool in bundle sheath cells. <i>Plant Physiology</i> <b>85</b>: 958–964.</li>
+<li>Furbank, R. T., Jenkins, C. L. D. &amp; Hatch, M. D. (1989) CO₂ concentrating mechanism of C4 photosynthesis: permeability of isolated bundle sheath cells to inorganic carbon. <i>Plant Physiology</i> <b>91</b>: 1364–1371.
+  <span class="why">Where the conductance in the first model's leakiness dial comes from.</span></li>
+<li>Jenkins, C. L. D., Furbank, R. T. &amp; Hatch, M. D. (1989) Mechanism of C4 photosynthesis: a model describing the inorganic carbon pool in bundle sheath cells. <i>Plant Physiology</i> <b>91</b>: 1372–1381.
+  <span class="why">The leakiness-and-overcycling argument, worked through.</span></li>
+<li>Hatch, M. D., Agostino, A. &amp; Jenkins, C. L. D. (1995) Measurement of the leakage of CO₂ from bundle-sheath cells of leaves during C4 photosynthesis. <i>Plant Physiology</i> <b>108</b>: 173–181.</li>
+<li>Farquhar, G. D. (1983) On the nature of carbon isotope discrimination in C4 species. <i>Australian Journal of Plant Physiology</i> <b>10</b>: 205–226.
+  <span class="why">Why δ¹³C can be read as a measurement of leakiness. The route to testing all this on a real plant.</span></li>
+</ul>
+
+<h3>The anatomy</h3>
+<ul class="refs">
+<li>Hattersley, P. W. &amp; Browning, A. J. (1981) Occurrence of the suberized lamella in leaves of grasses of different photosynthetic types. I. In parenchymatous bundle sheaths and PCR ("Kranz") sheaths. <i>Protoplasma</i> <b>109</b>: 371–401.</li>
+<li>Danila, F. R., Quick, W. P., White, R. G., Furbank, R. T. &amp; von Caemmerer, S. (2016) The metabolite pathway between bundle sheath and mesophyll: quantification of plasmodesmata in leaves of C3 and C4 monocots. <i>The Plant Cell</i> <b>28</b>: 1461–1471.
+  <span class="why">The plasmodesmata slider in the sandbox is asking the question this paper answers.</span></li>
+<li>Burnell, J. N. &amp; Hatch, M. D. (1988) Low bundle sheath carbonic anhydrase is apparently essential for effective C4 pathway operation. <i>Plant Physiology</i> <b>86</b>: 1252–1256.
+  <span class="why">Carbonic anhydrase has to be in the mesophyll and, just as importantly, has to be absent from the bundle sheath.</span></li>
+<li>Hatch, M. D. &amp; Burnell, J. N. (1990) Carbonic anhydrase activity in leaves and its role in the first step of C4 photosynthesis. <i>Plant Physiology</i> <b>93</b>: 825–828.</li>
+<li>Studer, A. J., Gandin, A., Kolbe, A. R., Wang, L., Cousins, A. B. &amp; Brutnell, T. P. (2014) A limited role for carbonic anhydrase in C4 photosynthesis as revealed by a <i>ca1ca2</i> double mutant in maize. <i>Plant Physiology</i> <b>165</b>: 608–617.
+  <span class="why">The counterpoint. Read it against the two above and against what the sandbox does when you move carbonic anhydrase.</span></li>
+</ul>
+
+<h3>The models themselves</h3>
+<ul class="refs">
+<li>von Caemmerer, S. &amp; Furbank, R. T. (1999) Modeling C4 photosynthesis. In: Sage, R. F. &amp; Monson, R. K. (eds) <i>C4 Plant Biology</i>, Academic Press, San Diego, pp. 173–211.
+  <span class="why">The flux equations both tools are built on.</span></li>
+<li>von Caemmerer, S. (2000) <i>Biochemical Models of Leaf Photosynthesis</i>. CSIRO Publishing, Collingwood.
+  <span class="why">Where the constants come from. The place to go if you want to change a parameter and know what you are doing.</span></li>
+<li>Farquhar, G. D., von Caemmerer, S. &amp; Berry, J. A. (1980) A biochemical model of photosynthetic CO₂ assimilation in leaves of C3 species. <i>Planta</i> <b>149</b>: 78–90.
+  <span class="why">The C3 model everything else is written against.</span></li>
+</ul>
+
+<h3>Evolution and context</h3>
+<ul class="refs">
+<li>Ehleringer, J. &amp; Björkman, O. (1977) Quantum yields for CO₂ uptake in C3 and C4 plants: dependence on temperature, CO₂, and O₂ concentration. <i>Plant Physiology</i> <b>59</b>: 86–90.
+  <span class="why">The temperature crossover, measured. The thing neither model covers.</span></li>
+<li>Sage, R. F. (2004) The evolution of C4 photosynthesis. <i>New Phytologist</i> <b>161</b>: 341–370.</li>
+<li>Sage, R. F., Christin, P.-A. &amp; Edwards, E. J. (2011) The C4 plant lineages of planet Earth. <i>Journal of Experimental Botany</i> <b>62</b>: 3155–3169.
+  <span class="why">More than sixty independent origins. Whatever the models make look difficult to assemble, evolution has assembled repeatedly.</span></li>
+</ul>
+
+<hr>
+</div>
+</body>
+</html>

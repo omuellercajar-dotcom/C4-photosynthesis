@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The C4 pump and its leak — BS3018</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4efe2;
+  --plate:#fbf8ef;
+  --ink:#26241e;
+  --soft:#6b6455;
+  --rule:#cfc5ad;
+  --co2:#38657d;
+  --acid:#b3781f;
+  --oxy:#9c3c24;
+  --meso:#6f8f4b;
+  --bs:#2f5d3f;
+  --sugar:#4a7a33;
+  --good:#3f6b4a;
+  --bad:#9c3c24;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:Spectral,Georgia,serif;font-weight:400;font-size:17px;line-height:1.62;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px) 80px}
+h1{font-size:clamp(28px,4.4vw,42px);font-weight:600;line-height:1.12;margin:0 0 10px;letter-spacing:-.012em}
+.stand{max-width:66ch;color:var(--soft);font-size:1.02rem;margin:0 0 6px}
+.course{font-size:.82rem;color:var(--soft);font-style:italic;margin:0 0 28px}
+h2{font-size:1.28rem;font-weight:600;margin:0 0 4px;letter-spacing:-.005em}
+h3{font-size:1rem;font-weight:600;margin:0 0 8px}
+p{margin:0 0 12px}
+.hint{font-size:.88rem;color:var(--soft);margin:0 0 16px;max-width:62ch}
+
+/* ---- the plate (hero figure) ---- */
+.plate{
+  background:var(--plate);border:1px solid var(--rule);
+  padding:14px 14px 6px;margin:0 0 30px;position:relative;
+}
+.plate:after{content:"";position:absolute;inset:5px;border:1px solid #e6dec9;pointer-events:none}
+.plate{overflow-x:auto}
+.plate svg{display:block;width:100%;min-width:600px;height:auto}
+.plate figcaption{font-size:.84rem;color:var(--soft);padding:2px 6px 10px;max-width:74ch;font-style:italic}
+
+.cols{display:grid;grid-template-columns:340px 1fr;gap:30px;align-items:start;margin-bottom:30px}
+.cols>*,.cols2>*{min-width:0}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start;margin-bottom:30px}
+@media(max-width:900px){.cols,.cols2{grid-template-columns:1fr;gap:26px}}
+@media(max-width:560px){.ctrl .val{font-size:.79rem}.big .n{font-size:1.35rem}}
+
+.panel{border-top:2px solid var(--ink);padding-top:12px}
+.sub{border-top:1px solid var(--rule);padding-top:10px;margin-top:20px}
+
+/* ---- controls ---- */
+.ctrl{margin:0 0 16px}
+.ctrl .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ctrl label{font-size:.95rem}
+.ctrl .val{font-family:"IBM Plex Mono",monospace;font-size:.86rem;color:var(--ink);text-align:right}
+.ctrl .note{font-size:.79rem;color:var(--soft);margin-top:1px;line-height:1.4}
+input[type=range]{width:100%;margin:5px 0 0;accent-color:var(--bs);height:22px}
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+button{
+  font-family:Spectral,serif;font-size:.88rem;color:var(--ink);background:#fffdf7;
+  border:1px solid var(--rule);padding:5px 11px;cursor:pointer;border-radius:2px;
+}
+button:hover{background:#f1ecdd}
+button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--co2);outline-offset:2px}
+
+/* ---- readout table ---- */
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:7px 8px 7px 0;border-bottom:1px solid #e6dec9;vertical-align:baseline}
+th{font-weight:400;color:var(--soft);font-size:.86rem}
+td.num{font-family:"IBM Plex Mono",monospace;text-align:right;white-space:nowrap;padding-right:14px}
+td.exp{font-size:.82rem;color:var(--soft)}
+.chip{display:inline-block;font-size:.74rem;padding:0 6px;border-radius:9px;border:1px solid currentColor}
+.ok{color:var(--good)}.off{color:var(--bad)}
+
+.bigrow{display:flex;gap:26px;flex-wrap:wrap;margin:0 0 14px}
+.big{min-width:120px}
+.big .n{font-family:"IBM Plex Mono",monospace;font-size:1.55rem;line-height:1.1}
+.big .k{font-size:.8rem;color:var(--soft)}
+
+canvas{width:100%;height:auto;display:block;background:var(--plate);border:1px solid var(--rule)}
+.legend{font-size:.8rem;color:var(--soft);margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:5px}
+
+details{border-top:1px solid var(--rule);padding:12px 0}
+summary{cursor:pointer;font-weight:600;font-size:1rem}
+details .body{max-width:74ch;font-size:.93rem;padding-top:8px}
+details ul{padding-left:19px;margin:6px 0 12px}
+details li{margin-bottom:6px}
+code,.eq{font-family:"IBM Plex Mono",monospace;font-size:.85rem;background:#eee7d6;padding:1px 5px}
+.eqb{font-family:"IBM Plex Mono",monospace;font-size:.83rem;background:#f7f2e4;border-left:2px solid var(--rule);padding:10px 12px;margin:8px 0 14px;white-space:pre;overflow-x:auto;line-height:1.75}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>The C4 pump and its leak</h1>
+<p class="stand">A single mesophyll cell and a single bundle sheath cell, coupled by a C4 acid shuttle running one way and a CO<sub>2</sub> leak running the other. Turn the pump up, loosen the bundle sheath wall, and watch what it costs.</p>
+<p class="course">BS3018 tutorial — reference implementation</p>
+
+<figure class="plate">
+<svg id="leaf" viewBox="0 0 760 430" role="img" aria-labelledby="leafttl">
+  <title id="leafttl">Animated leaf cross-section showing CO2 entering the mesophyll, being fixed by PEP carboxylase, carried to the bundle sheath as a C4 acid, released there, and partly leaking back</title>
+  <defs>
+    <marker id="mCo2" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#38657d"/></marker>
+    <marker id="mAcid" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#b3781f"/></marker>
+    <marker id="mPyr" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#c9a86a"/></marker>
+    <marker id="mSug" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#4a7a33"/></marker>
+    <marker id="mOxy" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="#9c3c24"/></marker>
+    <clipPath id="clipMeso"><rect x="56" y="92" width="284" height="228" rx="62"/></clipPath>
+    <clipPath id="clipBs"><rect x="440" y="92" width="232" height="228" rx="62"/></clipPath>
+  </defs>
+
+  <!-- leaf slab -->
+  <rect x="24" y="34" width="712" height="342" rx="12" fill="#eef3e2" stroke="#cfc5ad"/>
+  <path d="M24 46 h712" stroke="#cfc5ad" fill="none"/>
+  <rect x="24" y="34" width="712" height="24" rx="12" fill="#e9dfc6" stroke="none"/>
+  <rect x="24" y="352" width="712" height="24" rx="12" fill="#e9dfc6" stroke="none"/>
+  <rect x="24" y="34" width="712" height="342" rx="12" fill="none" stroke="#cfc5ad"/>
+  <text x="34" y="50" font-size="11" fill="#8d8471" font-style="italic">upper epidermis</text>
+
+  <!-- stoma -->
+  <rect x="86" y="352" width="44" height="24" fill="#eef3e2"/>
+  <ellipse cx="88" cy="364" rx="13" ry="10" fill="#dcd0b0" stroke="#6f8f4b"/>
+  <ellipse cx="128" cy="364" rx="13" ry="10" fill="#dcd0b0" stroke="#6f8f4b"/>
+  <line id="aIn" x1="108" y1="422" x2="108" y2="338" stroke="#38657d" stroke-width="6" marker-end="url(#mCo2)"/>
+  <text x="122" y="414" font-size="12.5" fill="#38657d">CO<tspan baseline-shift="sub" font-size="9">2</tspan> from air</text>
+  <text id="tA" x="122" y="399" font-size="12" font-family="IBM Plex Mono, monospace" fill="#38657d">A = 0</text>
+
+  <!-- mesophyll cell -->
+  <g clip-path="url(#clipMeso)">
+    <rect x="56" y="92" width="284" height="228" fill="#e2ecd0"/>
+    <rect id="fillM" x="56" y="320" width="284" height="0" fill="#a6c8da" fill-opacity="0.72"/>
+  </g>
+  <rect x="56" y="92" width="284" height="228" rx="62" fill="none" stroke="#6f8f4b" stroke-width="2"/>
+  <text x="82" y="116" font-size="13" fill="#57713a" font-style="italic">mesophyll cell</text>
+
+  <g font-size="13">
+    <rect x="96" y="140" width="134" height="30" rx="4" fill="#fbf8ef" stroke="#b3781f"/>
+    <text x="105" y="160" fill="#8a5b12">PEP carboxylase</text>
+    <line id="aPepc" x1="163" y1="214" x2="163" y2="182" stroke="#38657d" stroke-width="5" marker-end="url(#mCo2)"/>
+    <text id="tCm" x="96" y="248" font-size="15" font-family="IBM Plex Mono, monospace" fill="#2b4d5e">Cm 0 µbar</text>
+    <text x="96" y="266" font-size="11.5" fill="#6b6455">CO₂ in the mesophyll</text>
+  </g>
+
+  <!-- bundle sheath cell -->
+  <g clip-path="url(#clipBs)">
+    <rect x="440" y="92" width="232" height="228" fill="#dbe7d6"/>
+    <rect id="fillB" x="440" y="320" width="232" height="0" fill="#a6c8da" fill-opacity="0.72"/>
+  </g>
+  <rect x="440" y="92" width="232" height="228" rx="62" fill="none" stroke="#2f5d3f" stroke-width="2"/>
+  <rect id="wall" x="447" y="99" width="218" height="214" rx="56" fill="none" stroke="#7d6a3f" stroke-width="3" stroke-opacity=".85"/>
+  <text x="462" y="122" font-size="13" fill="#2f5d3f" font-style="italic">bundle sheath cell</text>
+  <text id="tWall" x="462" y="138" font-size="11" fill="#7d6a3f">suberised wall</text>
+
+  <g font-size="13">
+    <rect x="466" y="156" width="86" height="30" rx="4" fill="#fbf8ef" stroke="#2f5d3f"/>
+    <text x="478" y="176" fill="#2f5d3f">Rubisco</text>
+    <line id="aSug" x1="556" y1="171" x2="624" y2="171" stroke="#4a7a33" stroke-width="5" marker-end="url(#mSug)"/>
+    <text x="590" y="155" font-size="11.5" fill="#4a7a33" text-anchor="middle">triose-P</text>
+    <line id="aOxy" x1="552" y1="188" x2="600" y2="216" stroke="#9c3c24" stroke-width="2" marker-end="url(#mOxy)"/>
+    <text x="606" y="234" font-size="11.5" fill="#9c3c24" text-anchor="middle">photorespiration</text>
+    <text id="tCbs" x="462" y="276" font-size="15" font-family="IBM Plex Mono, monospace" fill="#1d4a5e">Cbs 0 µbar</text>
+    <text x="462" y="294" font-size="11.5" fill="#6b6455">CO₂ around Rubisco</text>
+  </g>
+
+  <!-- vein -->
+  <rect x="688" y="180" width="34" height="76" rx="12" fill="#e0d3b4" stroke="#b9a77e"/>
+  <text x="705" y="272" font-size="11" fill="#8d8471" text-anchor="middle">vein</text>
+
+  <!-- shuttle arrows -->
+  <line id="aAcid" x1="344" y1="142" x2="434" y2="142" stroke="#b3781f" stroke-width="8" marker-end="url(#mAcid)" stroke-dasharray="17 8"/>
+  <text x="390" y="126" font-size="12" fill="#8a5b12" text-anchor="middle">C4 acid</text>
+  <text id="tVp" x="390" y="166" font-size="11.5" font-family="IBM Plex Mono, monospace" fill="#8a5b12" text-anchor="middle">0</text>
+
+  <line id="aLeak" x1="436" y1="212" x2="346" y2="212" stroke="#38657d" stroke-width="4" marker-end="url(#mCo2)" stroke-dasharray="11 7"/>
+  <text x="390" y="196" font-size="12" fill="#2b4d5e" text-anchor="middle">CO₂ leak</text>
+  <text id="tL" x="390" y="236" font-size="11.5" font-family="IBM Plex Mono, monospace" fill="#2b4d5e" text-anchor="middle">0</text>
+
+  <line id="aPyr" x1="436" y1="282" x2="346" y2="282" stroke="#c9a86a" stroke-width="6" marker-end="url(#mPyr)" stroke-dasharray="13 7"/>
+  <text x="390" y="266" font-size="12" fill="#8d7440" text-anchor="middle">pyruvate</text>
+  <text id="tAtp" x="390" y="306" font-size="11.5" font-family="IBM Plex Mono, monospace" fill="#8d7440" text-anchor="middle">2 ATP</text>
+</svg>
+<figcaption>Arrow thickness is flux. The blue level inside each cell is its CO<sub>2</sub> partial pressure on a square-root scale, so the mesophyll stays readable while the bundle sheath fills. Wall thickness is the tightness of the bundle sheath, not its real anatomy.</figcaption>
+</figure>
+
+<div class="cols">
+  <section class="panel" aria-labelledby="hctrl">
+    <h2 id="hctrl">Conditions</h2>
+    <p class="hint">Everything settles in a few seconds of model time.</p>
+
+    <div class="ctrl">
+      <div class="top"><label for="sGbs">Bundle sheath leakiness</label><span class="val" id="vGbs"></span></div>
+      <input type="range" id="sGbs" min="0.5" max="20" step="0.1" value="5">
+      <div class="note">Conductance of the wall to CO<sub>2</sub>, g<sub>bs</sub>. Measured values sit between 3 and 6 mmol m⁻² s⁻¹ bar⁻¹.</div>
+    </div>
+
+    <div class="ctrl">
+      <div class="top"><label for="sVp">Pump capacity</label><span class="val" id="vVp"></span></div>
+      <input type="range" id="sVp" min="0" max="160" step="2" value="80">
+      <div class="note">Maximum PEP carboxylase rate, V<sub>pmax</sub>. Zero leaves Rubisco to work on mesophyll CO<sub>2</sub>.</div>
+    </div>
+
+    <div class="ctrl">
+      <div class="top"><label for="sCa">Air CO<sub>2</sub></label><span class="val" id="vCa"></span></div>
+      <input type="range" id="sCa" min="50" max="900" step="5" value="400">
+      <div class="note">Glacial minimum was near 180, today near 420.</div>
+    </div>
+
+    <div class="ctrl">
+      <div class="top"><label for="sI">Light</label><span class="val" id="vI"></span></div>
+      <input type="range" id="sI" min="0" max="2000" step="10" value="1600">
+      <div class="note">Sets the ATP budget shared between the two cycles.</div>
+    </div>
+
+    <div class="ctrl">
+      <div class="top"><label for="sO">Air O<sub>2</sub></label><span class="val" id="vO"></span></div>
+      <input type="range" id="sO" min="10" max="400" step="5" value="210">
+      <div class="note">Drop it to 20 mbar to switch photorespiration off.</div>
+    </div>
+
+    <div class="sub">
+      <h3>Presets</h3>
+      <div class="btns" id="presets">
+        <button data-p="maize">Well-run C4 leaf</button>
+        <button data-p="leaky">Leaky wall</button>
+        <button data-p="weak">Weak pump</button>
+        <button data-p="off">Pump switched off</button>
+        <button data-p="glacial">Glacial CO₂</button>
+        <button data-p="shade">Deep shade</button>
+      </div>
+      <div class="btns" style="margin-top:12px">
+        <button id="bRun" aria-pressed="true">Pause</button>
+        <button id="bStep">Step 1 s</button>
+        <button id="bReset">Reset pools</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="hread">
+    <h2 id="hread">What the leaf is doing</h2>
+    <p class="hint">Live values, updated every frame.</p>
+    <div class="bigrow">
+      <div class="big"><div class="n" id="bA">—</div><div class="k">net CO₂ fixed, µmol m⁻² s⁻¹</div></div>
+      <div class="big"><div class="n" id="bPhi">—</div><div class="k">of PEPC flux leaks back</div></div>
+      <div class="big"><div class="n" id="bAtp">—</div><div class="k">ATP spent per CO₂ fixed</div></div>
+    </div>
+    <p class="hint" id="limline" style="margin:-4px 0 16px"></p>
+    <table>
+      <thead><tr><th>Diagnostic</th><th style="text-align:right">Now</th><th>Expected in a real C4 leaf</th></tr></thead>
+      <tbody id="diag"></tbody>
+    </table>
+    <p class="hint" style="margin-top:12px">The right-hand column is the acceptance test. At the well-run preset every row should sit inside its range; push the sliders off-nominal and rows will fail, which is the point. The last row is the same Rubisco, the same ATP budget and the same stomatal conductance with no pump and no Kranz anatomy.</p>
+  </section>
+</div>
+
+<div class="cols2">
+  <section class="panel" aria-labelledby="hts">
+    <h2 id="hts">Filling and draining</h2>
+    <p class="hint">CO₂ in each compartment over the last 24 s of model time.</p>
+    <canvas id="cTime" width="640" height="300" aria-label="Time course of CO2 partial pressure in the mesophyll and bundle sheath"></canvas>
+    <div class="legend">
+      <span><i style="background:#1d4a5e"></i>bundle sheath</span>
+      <span><i style="background:#7fa8bd"></i>mesophyll</span>
+      <span><i style="background:#b9a77e"></i>air</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="hsw">
+    <h2 id="hsw">The cost of pumping harder</h2>
+    <p class="hint">Steady state recalculated across a range, holding everything else where you have it.</p>
+    <div class="btns" style="margin-bottom:10px" id="sweepSel">
+      <button data-s="gbs" aria-pressed="true">Vary leakiness</button>
+      <button data-s="vpmax">Vary pump capacity</button>
+    </div>
+    <canvas id="cSweep" width="640" height="300" aria-label="Net assimilation and ATP cost per CO2 across a range of pump capacity or leakiness"></canvas>
+    <div class="legend">
+      <span><i style="background:#2f5d3f"></i>net CO₂ fixed</span>
+      <span><i style="background:#9c3c24"></i>ATP per CO₂</span>
+      <span><i style="background:#b3781f"></i>where you are now</span>
+    </div>
+  </section>
+</div>
+
+<details open>
+<summary>The model</summary>
+<div class="body">
+<p>Two well-mixed CO<sub>2</sub> pools and one C4 acid pool, integrated forward in time. Partial pressures are in µbar, fluxes in µmol m⁻² s⁻¹, conductances in mmol m⁻² s⁻¹ bar⁻¹, so a flux is <code>g·ΔC/1000</code>. The flux expressions are those of von Caemmerer and Furbank's C4 model; the time dependence is added here so the pump can be seen filling.</p>
+<div class="eqb">Vp  = min( Vpmax·Cm/(Cm+Kp) , x·J/2 )          PEP carboxylation
+L   = gbs·(Cbs − Cm)/1000                      leak back to mesophyll
+Vc  = min( Vcmax·Cbs/(Cbs+Kc(1+Obs/Ko)) , (1−x)·J/(3+3.5φo) )
+φo  = Vo/Vc = Obs/(Sc/o·Cbs)                   oxygenation ratio
+A   = Vc − 0.5·Vo − Rd                         net assimilation
+
+d(Cm)/dt  = [ gs(Ca−Cm)/1000 + L + Rm − Vp ] / βm
+d(P)/dt   = Vp − kd·P                          C4 acid pool
+d(Cbs)/dt = [ kd·P + 0.5·Vo + Rbs − Vc − L ] / βbs</div>
+<p>Leakiness is <span class="eq">φ = L/Vp</span>. The ATP bill is <span class="eq">(3·Vc + 3.5·Vo + 2·Vp)/A</span>: three per carboxylation, roughly three and a half per oxygenation recovered through the photorespiratory cycle, two per turn of the C4 cycle to regenerate PEP from pyruvate. With the pump matched to demand this lands near five, which is the textbook number.</p>
+<p>Constants at 25 °C: Kp 80 µbar, Kc 650 µbar, Ko 450 mbar, S<sub>c/o</sub> 2590, Vcmax 70, Rd 1.0 split evenly between the two cells, gs 150 mmol m⁻² s⁻¹ bar⁻¹, x 0.4, Jmax 360 µmol ATP m⁻² s⁻¹ on a non-rectangular hyperbola (α 0.24, θ 0.72). Bundle sheath O<sub>2</sub> is raised above ambient by residual PSII activity there, <span class="eq">Obs = O + 0.15·A/(0.047·gbs)</span>. At the default settings the leaf sits close to co-limitation: PEP carboxylation is capped by ATP supply and Rubisco by its own capacity, which is where a well-lit maize leaf actually operates.</p>
+</div>
+</details>
+
+<details>
+<summary>Simplifications, stated deliberately</summary>
+<div class="body">
+<ul>
+<li>The C4 acid shuttle is one lumped pool with first-order decarboxylation. Malate and aspartate are not distinguished, PEP and pyruvate pools are not tracked, and plasmodesmatal transport is not resolved.</li>
+<li>One decarboxylation type only, NADP-ME-like. Switching to NAD-ME or PCK would move reductant between compartments and change bundle sheath O<sub>2</sub>.</li>
+<li>The bundle sheath is a single well-mixed compartment. There is no radial gradient inside the cell and no separate chloroplast envelope resistance, so the leak is governed by one conductance.</li>
+<li>Stomatal and mesophyll conductance are lumped into a fixed gs. Stomata do not respond to Ci, so the water-use argument for C4 cannot be made here.</li>
+<li>Carbonic anhydrase is assumed fast and non-limiting; PEPC kinetics are written in CO<sub>2</sub> rather than HCO<sub>3</sub><sup>−</sup> terms with an apparent Kp.</li>
+<li>Temperature is fixed at 25 °C. Every kinetic constant is a 25 °C value, so the C3/C4 crossover with temperature is outside this model.</li>
+<li>Buffering capacities βm and βbs are chosen to give roughly one-second time constants. They set how fast the traces move and nothing else; steady states are independent of them.</li>
+<li>Light limitation is handled as an ATP budget with fixed partitioning x = 0.4 to the C4 cycle. Real partitioning shifts with conditions.</li>
+<li>Triose phosphate export, starch synthesis and sink limitation are absent, so the leaf never becomes sink-limited.</li>
+</ul>
+<p>Sources for the flux structure and constants: von Caemmerer &amp; Furbank (1999) and von Caemmerer (2000); leakiness and its isotopic estimate follow Farquhar (1983); the ATP stoichiometry is Hatch's.</p>
+</div>
+</details>
+
+<details>
+<summary>Things worth trying</summary>
+<div class="body">
+<ul>
+<li>Drag leakiness from 5 to 20. Net fixation falls by about a fifth while the ATP bill climbs, because the pump keeps spending at the same rate on CO<sub>2</sub> that escapes before Rubisco sees it. This is the whole argument for a suberised wall.</li>
+<li>Switch the pump off. The leaf does not become a C3 leaf; it becomes a broken C4 leaf, with Rubisco sealed inside a compartment that CO<sub>2</sub> can barely reach. Compare it with the C3 reference row, which is the same Rubisco working at mesophyll CO<sub>2</sub>.</li>
+<li>Take air O<sub>2</sub> to 20 mbar and watch the C3 reference climb while the C4 leaf barely moves. Suppressing oxygenation is what the pump was already doing.</li>
+<li>Walk air CO<sub>2</sub> from 180 to 900 µbar. The C4 leaf saturates near 400; the C3 reference keeps rising. Read off where the advantage was largest and where it is heading.</li>
+<li>Move light to 250 µmol m⁻² s⁻¹. The C4 leaf now falls below the C3 reference, because two of its five ATP go on a pump that a shaded leaf cannot afford.</li>
+<li>Push pump capacity past 80 and nothing happens. Find out why in the limitation line under the headline numbers, then raise the light and try again.</li>
+</ul>
+</div>
+</details>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- model ---------------- */
+var K = {
+  Kp:80, Kc:650, Ko:450, Sco:2590,
+  Vcmax:70, Rd:1.0, x:0.4, Jmax:360, aQ:0.24, theta:0.72,
+  kd:2.0, bm:0.08, bbs:0.012, gs:150, alphaPS:0.15
+};
+
+var P = { gbs:5, Vpmax:80, Ca:400, I:1600, O:210 };
+
+function jatp(I){
+  var a = K.aQ*I, b = K.Jmax, t = K.theta;
+  var s = a + b;
+  var disc = s*s - 4*t*a*b;
+  if(disc < 0) disc = 0;
+  return (s - Math.sqrt(disc)) / (2*t);
+}
+
+// one evaluation of all fluxes for a given state and parameter set
+function fluxes(st, p){
+  var Cm = st.Cm > 0 ? st.Cm : 0;
+  var Cbs = st.Cbs > 0 ? st.Cbs : 0;
+  var pool = st.P > 0 ? st.P : 0;
+  var J = jatp(p.I);
+
+  var VpEnz = p.Vpmax * Cm / (Cm + K.Kp);
+  var VpLight = K.x * J / 2;
+  var Vp = Math.min(VpEnz, VpLight);
+
+  var Aprev = st.A > 0 ? st.A : 0;
+  var Obs = p.O + K.alphaPS * Aprev / (0.047 * Math.max(p.gbs, 0.05));
+
+  var phiO = (Obs*1000) / (K.Sco * Math.max(Cbs, 0.5));
+  var VcEnz = K.Vcmax * Cbs / (Cbs + K.Kc*(1 + Obs/K.Ko));
+  var VcLight = (1 - K.x) * J / (3 + 3.5*phiO);
+  var Vc = Math.min(VcEnz, VcLight);
+  var Vo = Vc * phiO;
+
+  var L = p.gbs * (Cbs - Cm) / 1000;
+  var Vdc = K.kd * pool;
+  var Ain = K.gs * (p.Ca - Cm) / 1000;
+  var Rm = 0.5*K.Rd, Rbs = 0.5*K.Rd;
+  var A = Vc - 0.5*Vo - K.Rd;
+
+  return {
+    Vp:Vp, VpEnz:VpEnz, VpLight:VpLight, L:L, Vc:Vc, Vo:Vo, Vdc:Vdc,
+    Ain:Ain, A:A, Obs:Obs, phiO:phiO, J:J, Rm:Rm, Rbs:Rbs,
+    limP: VpEnz <= VpLight ? "enzyme" : "light",
+    limC: VcEnz <= VcLight ? "Rubisco" : "light"
+  };
+}
+
+function step(st, p, dt){
+  var f = fluxes(st, p);
+  var dCm  = (f.Ain + f.L + f.Rm - f.Vp) / K.bm;
+  var dP   = (f.Vp - f.Vdc);
+  var dCbs = (f.Vdc + 0.5*f.Vo + f.Rbs - f.Vc - f.L) / K.bbs;
+  st.Cm  = Math.max(0, st.Cm  + dt*dCm);
+  st.P   = Math.max(0, st.P   + dt*dP);
+  st.Cbs = Math.max(0, st.Cbs + dt*dCbs);
+  st.A   = f.A;
+  return f;
+}
+
+function solveSteady(p, seed){
+  var st = seed ? {Cm:seed.Cm, Cbs:seed.Cbs, P:seed.P, A:seed.A}
+                : {Cm:p.Ca*0.4, Cbs:p.Ca*0.4, P:5, A:5};
+  var dt = 0.008, f = null;
+  for(var i=0;i<6000;i++){
+    var prev = st.Cbs;
+    f = step(st, p, dt);
+    if(i > 600 && Math.abs(st.Cbs - prev) < 2e-6) break;
+  }
+  return {st:st, f:f};
+}
+
+// C3 reference leaf: same Rubisco, same J, same gs, no pump
+function c3Leaf(p){
+  function assim(Cc){
+    var J = jatp(p.I);
+    var phiO = (p.O*1000)/(K.Sco*Math.max(Cc,0.5));
+    var Vc = Math.min(K.Vcmax*Cc/(Cc + K.Kc*(1+p.O/K.Ko)), J/(3+3.5*phiO));
+    return Vc - 0.5*Vc*phiO - K.Rd;
+  }
+  var lo = 0.5, hi = p.Ca;
+  for(var i=0;i<60;i++){
+    var mid = 0.5*(lo+hi);
+    var res = K.gs*(p.Ca - mid)/1000 - assim(mid);
+    if(res > 0) lo = mid; else hi = mid;
+  }
+  var Cc = 0.5*(lo+hi);
+  return {A: assim(Cc), Cc: Cc};
+}
+
+function compensationPoint(p){
+  var lo = 0.2, hi = 400, q = {};
+  for(var k in p) q[k] = p[k];
+  for(var i=0;i<20;i++){
+    var mid = 0.5*(lo+hi);
+    q.Ca = mid;
+    var r = solveSteady(q);
+    if(r.f.A > 0) hi = mid; else lo = mid;
+  }
+  return 0.5*(lo+hi);
+}
+
+/* ---------------- state ---------------- */
+var st = {Cm:160, Cbs:160, P:0, A:0};
+var running = true;
+var trace = [];             // {t, Cm, Cbs}
+var tModel = 0;
+var WINDOW = 24;            // seconds shown
+var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------- dom ---------------- */
+function $(id){ return document.getElementById(id); }
+var sliders = [
+  {el:$("sGbs"), out:$("vGbs"), key:"gbs", fmt:function(v){return v.toFixed(1)+" mmol m⁻² s⁻¹ bar⁻¹";}},
+  {el:$("sVp"),  out:$("vVp"),  key:"Vpmax", fmt:function(v){return v.toFixed(0)+" µmol m⁻² s⁻¹";}},
+  {el:$("sCa"),  out:$("vCa"),  key:"Ca", fmt:function(v){return v.toFixed(0)+" µbar";}},
+  {el:$("sI"),   out:$("vI"),   key:"I", fmt:function(v){return v.toFixed(0)+" µmol m⁻² s⁻¹";}},
+  {el:$("sO"),   out:$("vO"),   key:"O", fmt:function(v){return v.toFixed(0)+" mbar";}}
+];
+var sweepDirty = true, slowDirty = true;
+
+function syncSliders(){
+  sliders.forEach(function(s){
+    s.el.value = P[s.key];
+    s.out.textContent = s.fmt(P[s.key]);
+  });
+}
+sliders.forEach(function(s){
+  s.el.addEventListener("input", function(){
+    P[s.key] = parseFloat(s.el.value);
+    s.out.textContent = s.fmt(P[s.key]);
+    sweepDirty = true; slowDirty = true;
+  });
+});
+
+var presets = {
+  maize:   {gbs:5,  Vpmax:80, Ca:400, I:1600, O:210},
+  leaky:   {gbs:20, Vpmax:80, Ca:400, I:1600, O:210},
+  weak:    {gbs:5,  Vpmax:30, Ca:400, I:1600, O:210},
+  off:     {gbs:5,  Vpmax:0,  Ca:400, I:1600, O:210},
+  glacial: {gbs:5,  Vpmax:80, Ca:180, I:1600, O:210},
+  shade:   {gbs:5,  Vpmax:80, Ca:400, I:250,  O:210}
+};
+$("presets").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-p]");
+  if(!b) return;
+  var q = presets[b.getAttribute("data-p")];
+  for(var k in q) P[k] = q[k];
+  syncSliders();
+  sweepDirty = true; slowDirty = true;
+});
+
+$("bRun").addEventListener("click", function(){
+  running = !running;
+  this.setAttribute("aria-pressed", running ? "true" : "false");
+  this.textContent = running ? "Pause" : "Run";
+});
+$("bStep").addEventListener("click", function(){
+  for(var i=0;i<200;i++){ step(st, P, 0.005); tModel += 0.005; }
+  pushTrace(); draw();
+});
+$("bReset").addEventListener("click", function(){
+  st = {Cm:P.Ca*0.4, Cbs:P.Ca*0.4, P:0, A:0};
+  trace = []; tModel = 0; draw();
+});
+
+var sweepMode = "gbs";
+$("sweepSel").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-s]");
+  if(!b) return;
+  sweepMode = b.getAttribute("data-s");
+  Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){
+    x.setAttribute("aria-pressed", x === b ? "true" : "false");
+  });
+  sweepDirty = true;
+});
+
+/* ---------------- svg update ---------------- */
+function w(flux, k, min, max){
+  var v = min + Math.abs(flux)*k;
+  return Math.max(min, Math.min(max, v));
+}
+function level(C){ return Math.min(1, Math.sqrt(Math.max(C,0)/3000)); }
+
+var dash = 0;
+function drawSvg(f){
+  $("aIn").setAttribute("stroke-width", w(f.Ain, 0.16, 1, 10));
+  $("aPepc").setAttribute("stroke-width", w(f.Vp, 0.13, 1, 9));
+  $("aAcid").setAttribute("stroke-width", w(f.Vp, 0.17, 1.2, 12));
+  $("aLeak").setAttribute("stroke-width", w(f.L, 0.5, 1, 12));
+  $("aPyr").setAttribute("stroke-width", w(f.Vp, 0.13, 1, 9));
+  $("aSug").setAttribute("stroke-width", w(f.Vc - 0.5*f.Vo, 0.15, 1, 10));
+  $("aOxy").setAttribute("stroke-width", w(f.Vo, 0.6, 0.6, 9));
+
+  var hM = level(st.Cm)*228, hB = level(st.Cbs)*228;
+  $("fillM").setAttribute("y", 320 - hM); $("fillM").setAttribute("height", hM);
+  $("fillB").setAttribute("y", 320 - hB); $("fillB").setAttribute("height", hB);
+
+  var tight = Math.max(1, Math.min(9, 22/Math.max(P.gbs,0.3)));
+  $("wall").setAttribute("stroke-width", tight.toFixed(2));
+  $("tWall").textContent = P.gbs < 2 ? "suberised wall — tight"
+                        : P.gbs > 8 ? "suberised wall — leaky" : "suberised wall";
+
+  $("tCm").textContent  = "Cm  " + st.Cm.toFixed(0) + " µbar";
+  $("tCbs").textContent = "Cbs " + st.Cbs.toFixed(0) + " µbar";
+  $("tVp").textContent  = f.Vp.toFixed(1);
+  $("tL").textContent   = f.L.toFixed(1);
+  $("tA").textContent   = "A = " + f.A.toFixed(1);
+  $("tAtp").textContent = (2*f.Vp).toFixed(0) + " ATP s⁻¹";
+
+  if(!reduced){
+    dash = (dash + 1.1) % 25;
+    $("aAcid").setAttribute("stroke-dashoffset", -dash);
+    $("aPyr").setAttribute("stroke-dashoffset", dash*0.72);
+    $("aLeak").setAttribute("stroke-dashoffset", dash);
+  }
+}
+
+/* ---------------- readouts ---------------- */
+var diagRows = [
+  {name:"Concentrating factor, Cbs/Cm", lo:5, hi:20, exp:"5 – 20 ×",
+   get:function(f){ return st.Cbs/Math.max(st.Cm,1); }, fmt:function(v){return v.toFixed(1)+" ×";}},
+  {name:"Bundle sheath CO₂", lo:900, hi:3000, exp:"900 – 3000 µbar",
+   get:function(f){ return st.Cbs; }, fmt:function(v){return v.toFixed(0)+" µbar";}},
+  {name:"Mesophyll CO₂ as a fraction of air", lo:0.25, hi:0.5, exp:"0.25 – 0.50",
+   get:function(f){ return st.Cm/P.Ca; }, fmt:function(v){return v.toFixed(2);}},
+  {name:"Leakiness, φ = L/Vp", lo:0.10, hi:0.30, exp:"0.10 – 0.30",
+   get:function(f){ return f.Vp > 0.01 ? f.L/f.Vp : NaN; }, fmt:function(v){return isNaN(v)?"—":v.toFixed(2);}},
+  {name:"Oxygenation ratio, Vo/Vc", lo:0, hi:0.10, exp:"under 0.10",
+   get:function(f){ return f.phiO; }, fmt:function(v){return v.toFixed(3);}},
+  {name:"ATP per net CO₂", lo:5.0, hi:6.2, exp:"5 with no leak, 5 – 6 in practice",
+   get:function(f){ return f.A > 0.01 ? (3*f.Vc + 3.5*f.Vo + 2*f.Vp)/f.A : NaN; },
+   fmt:function(v){return isNaN(v)?"—":v.toFixed(2);}},
+  {name:"CO₂ compensation point", lo:0, hi:10, exp:"under 10 µbar, against 40 – 60 for C3", slow:true,
+   get:function(){ return slowCache.gamma; }, fmt:function(v){return v.toFixed(1)+" µbar";}},
+  {name:"Same Rubisco with no pump at all", lo:-1e9, hi:1e9, exp:"C3 reference leaf", slow:true,
+   get:function(){ return slowCache.c3; },
+   fmt:function(v){return v.toFixed(1)+" µmol m⁻² s⁻¹";}, noChip:true}
+];
+var slowCache = {gamma:0, c3:0};
+
+var tbody = $("diag");
+diagRows.forEach(function(r){
+  var tr = document.createElement("tr");
+  tr.innerHTML = "<td>"+r.name+"</td><td class='num'></td><td class='exp'>"+r.exp+"</td>";
+  tbody.appendChild(tr);
+  r.cell = tr.children[1];
+  r.chip = tr.children[2];
+});
+
+function updateReadouts(f){
+  $("bA").textContent = f.A.toFixed(1);
+  var phi = f.Vp > 0.01 ? f.L/f.Vp : NaN;
+  $("bPhi").textContent = isNaN(phi) ? "—" : (100*phi).toFixed(0)+"%";
+  var atp = f.A > 0.01 ? (3*f.Vc + 3.5*f.Vo + 2*f.Vp)/f.A : NaN;
+  $("bAtp").textContent = isNaN(atp) ? "—" : atp.toFixed(1);
+  $("limline").textContent =
+    "PEP carboxylation is held back by " + (f.limP === "enzyme" ? "PEP carboxylase itself" : "the ATP supply")
+    + "; Rubisco by " + (f.limC === "Rubisco" ? "its own capacity" : "the ATP supply") + ".";
+
+  diagRows.forEach(function(r){
+    var v = r.get(f);
+    r.cell.textContent = r.fmt(v);
+    if(r.noChip){ r.chip.textContent = r.exp; r.chip.className = "exp"; return; }
+    var ok = !isNaN(v) && v >= r.lo && v <= r.hi;
+    r.chip.innerHTML = r.exp + " <span class='chip " + (ok?"ok":"off") + "'>" + (ok?"in range":"out") + "</span>";
+  });
+}
+
+function refreshSlow(){
+  slowCache.gamma = compensationPoint(P);
+  slowCache.c3 = c3Leaf(P).A;
+  slowDirty = false;
+}
+
+/* ---------------- charts ---------------- */
+function dpr(cv){
+  var r = window.devicePixelRatio || 1;
+  var w = cv.clientWidth || 640, h = Math.round(w*300/640);
+  if(cv.width !== Math.round(w*r) || cv.height !== Math.round(h*r)){
+    cv.width = Math.round(w*r); cv.height = Math.round(h*r);
+    cv.style.height = h + "px";
+  }
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(r,0,0,r,0,0);
+  return {ctx:ctx, w:w, h:h};
+}
+function axes(ctx, m, w, h, xlab, ylab, y2lab){
+  ctx.strokeStyle = "#cfc5ad"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(m.l, m.t); ctx.lineTo(m.l, h-m.b); ctx.lineTo(w-m.r, h-m.b);
+  ctx.stroke();
+  ctx.fillStyle = "#6b6455"; ctx.font = "12px Spectral, Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText(xlab, (m.l + w - m.r)/2, h - 6);
+  ctx.save(); ctx.translate(12, (m.t + h - m.b)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(ylab, 0, 0); ctx.restore();
+  if(y2lab){
+    ctx.save(); ctx.translate(w-10, (m.t + h - m.b)/2); ctx.rotate(Math.PI/2);
+    ctx.fillText(y2lab, 0, 0); ctx.restore();
+  }
+}
+
+function niceStep(x){
+  if(!(x > 0)) return 1;
+  var e = Math.pow(10, Math.floor(Math.log(x)/Math.LN10));
+  var f = x/e;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+}
+
+function pushTrace(){
+  trace.push({t:tModel, Cm:st.Cm, Cbs:st.Cbs, Ca:P.Ca});
+  while(trace.length && trace[0].t < tModel - WINDOW) trace.shift();
+}
+
+function drawTime(){
+  var d = dpr($("cTime")), ctx = d.ctx, w = d.w, h = d.h;
+  var m = {l:52, r:16, t:14, b:30};
+  ctx.clearRect(0,0,w,h);
+  var ymax = 500;
+  trace.forEach(function(p){ ymax = Math.max(ymax, p.Cbs*1.12, p.Ca*1.2); });
+  var stepY = niceStep(ymax/4);
+  ymax = stepY*4;
+  var t1 = Math.max(WINDOW, tModel), t0 = t1 - WINDOW;
+  function X(t){ return m.l + (t - t0)/WINDOW*(w-m.l-m.r); }
+  function Y(v){ return (h-m.b) - Math.min(v,ymax)/ymax*(h-m.b-m.t); }
+
+  ctx.strokeStyle = "#e6dec9"; ctx.fillStyle = "#8d8471";
+  ctx.font = "11px 'IBM Plex Mono', monospace"; ctx.textAlign = "right";
+  for(var g=0; g<=4; g++){
+    var v = ymax*g/4, y = Y(v);
+    ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(w-m.r, y); ctx.stroke();
+    ctx.fillText(v.toFixed(0), m.l-6, y+4);
+  }
+  ctx.fillStyle = "#8d8471"; ctx.textAlign = "center";
+  for(var tk=0; tk<=4; tk++){
+    var tv = t0 + WINDOW*tk/4;
+    ctx.fillText((tv - t1).toFixed(0), X(tv), h-m.b+16);
+  }
+  axes(ctx, m, w, h, "seconds, counting back from now", "CO₂ partial pressure, µbar");
+
+  function line(key, color, width){
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath();
+    trace.forEach(function(p, i){
+      var x = X(p.t), y = Y(p[key]);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  ctx.setLineDash([4,4]); line("Ca", "#b9a77e", 1.5); ctx.setLineDash([]);
+  line("Cm", "#7fa8bd", 2);
+  line("Cbs", "#1d4a5e", 2.5);
+}
+
+var sweepData = null;
+function computeSweep(){
+  var pts = [], N = 34, q = {};
+  for(var k in P) q[k] = P[k];
+  var seed = null;
+  for(var i=0;i<N;i++){
+    var frac = i/(N-1), xv;
+    if(sweepMode === "vpmax"){ xv = 4 + frac*156; q.Vpmax = xv; }
+    else { xv = 0.5*Math.pow(20/0.5, frac); q.gbs = xv; }
+    var r = solveSteady(q, seed);
+    seed = r.st;
+    var f = r.f;
+    var atp = f.A > 0.05 ? (3*f.Vc + 3.5*f.Vo + 2*f.Vp)/f.A : NaN;
+    pts.push({x:xv, A:f.A, atp:atp});
+  }
+  sweepData = {pts:pts, mode:sweepMode, now: sweepMode === "vpmax" ? P.Vpmax : P.gbs};
+  sweepDirty = false;
+}
+
+function drawSweep(){
+  if(!sweepData) return;
+  var d = dpr($("cSweep")), ctx = d.ctx, w = d.w, h = d.h;
+  var m = {l:50, r:58, t:14, b:34};
+  ctx.clearRect(0,0,w,h);
+  var pts = sweepData.pts, log = sweepData.mode === "gbs";
+  var x0 = pts[0].x, x1 = pts[pts.length-1].x;
+  function X(v){
+    var f = log ? (Math.log(v/x0)/Math.log(x1/x0)) : ((v-x0)/(x1-x0));
+    return m.l + f*(w-m.l-m.r);
+  }
+  var amax = 5, cmax = 6;
+  pts.forEach(function(p){
+    if(isFinite(p.A)) amax = Math.max(amax, p.A*1.12);
+    if(isFinite(p.atp)) cmax = Math.max(cmax, Math.min(p.atp*1.12, 24));
+  });
+  amax = Math.ceil(amax/20)*20;
+  cmax = Math.ceil(cmax/4)*4;
+  function YA(v){ return (h-m.b) - Math.max(0,v)/amax*(h-m.b-m.t); }
+  function YC(v){ return (h-m.b) - Math.min(v,cmax)/cmax*(h-m.b-m.t); }
+
+  ctx.strokeStyle = "#e6dec9";
+  for(var g=0; g<=4; g++){
+    var y = (h-m.b) - g/4*(h-m.b-m.t);
+    ctx.beginPath(); ctx.moveTo(m.l,y); ctx.lineTo(w-m.r,y); ctx.stroke();
+  }
+  ctx.font = "11px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = "#2f5d3f"; ctx.textAlign = "right";
+  for(g=0; g<=4; g++) ctx.fillText((amax*g/4).toFixed(0), m.l-7, (h-m.b)-g/4*(h-m.b-m.t)+4);
+  ctx.fillStyle = "#9c3c24"; ctx.textAlign = "left";
+  for(g=0; g<=4; g++) ctx.fillText((cmax*g/4).toFixed(0), w-m.r+6, (h-m.b)-g/4*(h-m.b-m.t)+4);
+
+  // x ticks
+  ctx.fillStyle = "#8d8471"; ctx.textAlign = "center";
+  var ticks = log ? [0.5,1,2,5,10,20] : [4,40,80,120,160];
+  ticks.forEach(function(t){
+    if(t < x0 || t > x1) return;
+    ctx.fillText(String(t), X(t), h-m.b+16);
+  });
+
+  axes(ctx, m, w, h,
+    sweepData.mode === "vpmax" ? "pump capacity, Vpmax" : "leakiness, gbs",
+    "net CO₂ fixed", "ATP per CO₂");
+
+  function line(key, color, Y, width){
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath();
+    var started = false;
+    pts.forEach(function(p){
+      var v = p[key];
+      if(!isFinite(v)){ started = false; return; }
+      var x = X(p.x), y = Y(v);
+      if(!started){ ctx.moveTo(x,y); started = true; } else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  ctx.setLineDash([5,4]); line("atp", "#9c3c24", YC, 2); ctx.setLineDash([]);
+  line("A", "#2f5d3f", YA, 2.5);
+
+  var nx = X(Math.max(x0, Math.min(x1, sweepData.now)));
+  ctx.strokeStyle = "#b3781f"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(nx, m.t); ctx.lineTo(nx, h-m.b); ctx.stroke();
+}
+
+/* ---------------- loop ---------------- */
+var last = 0;
+function draw(){
+  var f = fluxes(st, P);
+  drawSvg(f);
+  updateReadouts(f);
+  drawTime();
+  if(sweepDirty) computeSweep();
+  drawSweep();
+}
+
+function frame(ts){
+  if(running){
+    for(var i=0;i<30;i++){ step(st, P, 0.005); }
+    tModel += 0.15;
+    pushTrace();
+  }
+  if(slowDirty && ts - last > 350){ refreshSlow(); last = ts; }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+syncSliders();
+st = {Cm:P.Ca*0.4, Cbs:P.Ca*0.4, P:0, A:0};
+refreshSlow();
+computeSweep();
+window.addEventListener("resize", function(){ drawTime(); drawSweep(); });
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
